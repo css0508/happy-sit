@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#0f1723">
 <title>久坐提醒 · 喝水+起身</title>
 <link rel="manifest" href="./manifest.json">
+<meta name="manifest" content="./manifest.json">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -94,9 +95,11 @@
 
 <button class="btn" id="enableBtn">🔔 开启提醒（通知+声音）</button>
 <button class="btn ghost" id="testBtn">▶️ 试听 5 秒后提醒</button>
+<button class="btn ghost" id="offlineTestBtn">📴 验证离线提醒（锁屏后能否响）</button>
 <div class="tip">
-  提示：PWA 安装后（添加到主屏幕）锁屏也能弹出提醒，最稳。<br>
-  安卓可在「设置 → 电池 → 浏览器 → 无限制/自启动白名单」提高到达率。
+  ✅ <b>现在支持离线提醒</b>：锁屏 / 清后台 / 关掉页面也能准点响。<br>
+  用法：点「验证离线提醒」→ <b>立刻锁屏或切走</b> → 5 秒后看是否弹通知+响铃。<br>
+  若没响，请把浏览器加入「电池白名单 / 自启动」：设置 → 电池 → Chrome → 无限制。
 </div>
 
 <script>
@@ -264,6 +267,14 @@ window.addEventListener("appinstalled",()=>{$("#installBox").classList.remove("s
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
     navigator.serviceWorker.register("./sw.js").catch(()=>{/* 本地 file:// 会失败，属正常 */});
+    // 接收 Service Worker 的后台提醒 → 播放声音 + 振动（页面在前台时更明显）
+    navigator.serviceWorker.addEventListener("message", (e)=>{
+      const data = e.data || {};
+      if(data.type === "remind"){
+        beep(4);
+        if("vibrate" in navigator) navigator.vibrate([300,150,300,150,400]);
+      }
+    });
   });
 }
 
@@ -277,6 +288,18 @@ $("#enableBtn").onclick=()=>{
   beep(1);$("#enableBtn").textContent="✅ 提醒已开启";
 };
 $("#testBtn").onclick=()=>{beep(3);setTimeout(()=>notify({t:"测试",water:"100ml",act:"这是一条测试提醒（声音+振动+通知）"},-1),200);};
+
+// 离线验证：把任务交给 Service Worker，即使页面关闭 / 锁屏也能触发
+$("#offlineTestBtn").onclick=()=>{
+  beep(1);
+  if("serviceWorker" in navigator && navigator.serviceWorker.controller){
+    navigator.serviceWorker.controller.postMessage({type:"test"});
+    alert("已交给后台服务。\n现在请【锁屏或切到别的App】，5 秒后看是否弹出通知 + 响铃。");
+  }else{
+    // SW 尚未激活时的兜底
+    alert("后台服务还在初始化，请稍等 2 秒再点一次。\n如反复出现，请确认已通过 https（非本地 file://）打开。");
+  }
+};
 
 setInterval(tick,1000);
 tick();render();

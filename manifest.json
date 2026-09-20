@@ -2,7 +2,7 @@
   "name": "久坐提醒 · 喝水+起身",
   "short_name": "喝水提醒",
   "description": "上班族久坐提醒：到点喝水、起身运动",
-  "start_url": "./提醒.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
