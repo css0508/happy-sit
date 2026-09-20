@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0f1723">
+<title>久坐提醒 · 喝水+起身</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{--bg:#0f1723;--card:#1a2638;--line:#2a3748;--blue:#3b82f6;--green:#22c55e;--water:#38bdf8;--text:#e8eef7;--sub:#93a3b8}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);padding:12px 12px calc(24px + env(safe-area-inset-bottom));font-size:15px;line-height:1.45}
+  .top{position:sticky;top:0;z-index:20;background:rgba(15,23,35,.92);backdrop-filter:blur(10px);margin:-12px -12px 12px;padding:14px 14px 12px;border-bottom:1px solid var(--line)}
+  .clock{font-size:32px;font-weight:700;letter-spacing:1px;text-align:center}
+  .clock small{font-size:12px;color:var(--sub);font-weight:400;margin-left:6px}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:8px;margin-top:6px;background:rgba(34,197,94,.18);color:#86efac}
+  .badge.off{background:rgba(248,113,113,.18);color:#fca5a5}
+  .ring-wrap{display:flex;align-items:center;gap:14px;margin-top:10px}
+  .ring{position:relative;width:64px;height:64px;flex-shrink:0}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700}
+  .ring-info b{font-size:15px;display:block}
+  .ring-info span{font-size:12px;color:var(--sub)}
+  .next-box{margin-top:10px;background:linear-gradient(135deg,#1e3a5f,#16324d);border:1px solid #2c5282;border-radius:14px;padding:12px 14px}
+  .next-label{font-size:12px;color:#93c5fd}
+  .next-time{font-size:22px;font-weight:700;color:#fff;margin:2px 0 4px}
+  .next-desc{font-size:14px;color:#dbeafe}
+  .bar{height:6px;background:#0f1723;border-radius:6px;margin-top:10px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#22c55e,#3b82f6);transition:width .3s}
+  .install{display:none;align-items:center;gap:10px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:14px}
+  .install.show{display:flex}
+  .install .x{margin-left:auto;font-size:18px;opacity:.8}
+  .sec-title{font-size:13px;color:var(--sub);margin:16px 4px 8px}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;display:flex;gap:11px;align-items:flex-start;transition:all .25s}
+  .item.done{opacity:.42}
+  .item.done .t{text-decoration:line-through}
+  .item.now{border-color:var(--green);box-shadow:0 0 0 2px rgba(34,197,94,.35);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 2px rgba(34,197,94,.3)}50%{box-shadow:0 0 0 5px rgba(34,197,94,.12)}}
+  .time{font-size:17px;font-weight:700;min-width:54px;text-align:center;padding-top:1px}
+  .ico{font-size:16px;min-width:22px;text-align:center;padding-top:2px}
+  .body{flex:1}
+  .body .d{font-size:14px}
+  .body .water{font-size:12px;color:var(--water);margin-top:3px}
+  .chk{width:26px;height:26px;border-radius:50%;border:2px solid #475569;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent}
+  .item.done .chk{background:var(--green);border-color:var(--green);color:#fff}
+  .tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
+  .tag.w{background:rgba(56,189,248,.18);color:#7dd3fc}
+  .tag.m{background:rgba(167,139,250,.2);color:#c4b5fd}
+  .off{text-align:center;color:var(--sub);padding:30px 20px;font-size:14px}
+  .btn{display:block;width:100%;margin:6px 0 14px;padding:13px;border:none;border-radius:12px;background:var(--blue);color:#fff;font-size:15px;font-weight:600}
+  .btn.ghost{background:var(--card);border:1px solid var(--line);color:var(--text);font-weight:400;font-size:13px}
+  .tip{font-size:11px;color:var(--sub);text-align:center;margin-top:6px;line-height:1.6}
+  .stat{display:flex;gap:10px;margin-top:10px}
+  .stat>div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
+  .stat b{display:block;font-size:20px;color:var(--green)}
+  .stat span{font-size:11px;color:var(--sub)}
+</style>
+</head>
+<body>
+
+<div class="install" id="installBox">
+  📲 <div><b>装到桌面 = 真 App</b><br><span style="font-size:12px;opacity:.9">点右上角「分享 → 添加到主屏幕」，之后锁屏也能准时提醒</span></div>
+  <span class="x" onclick="this.closest('.install').style.display='none'">✕</span>
+</div>
+
+<div class="top">
+  <div class="clock" id="clock">--:--<small id="dateStr"></small></div>
+  <div id="dayBadge"></div>
+  <div class="ring-wrap">
+    <div class="ring">
+      <svg width="64" height="64"><circle cx="32" cy="32" r="27" stroke="#2a3748" stroke-width="8" fill="none"/>
+        <circle id="ringFill" cx="32" cy="32" r="27" stroke="#38bdf8" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="169.6"/></svg>
+      <div class="num"><span id="ringNum">0%</span></div>
+    </div>
+    <div class="ring-info"><b id="waterText">今日 0 / 0 ml</b><span>全天饮水目标，完成打卡自动累计</span></div>
+  </div>
+  <div class="next-box" id="nextBox">
+    <div class="next-label">⏳ 最近提醒</div>
+    <div class="next-time" id="nextTime">—</div>
+    <div class="next-desc" id="nextDesc">点击「开启提醒」以启用通知与声音</div>
+    <div class="bar"><i id="progress"></i></div>
+  </div>
+  <div class="stat">
+    <div><b id="statDone">0</b><span>已完成</span></div>
+    <div><b id="statWater">0</b><span>已喝 ml</span></div>
+    <div><b id="statLeft">0</b><span>待完成</span></div>
+  </div>
+</div>
+
+<div id="list"></div>
+
+<button class="btn" id="enableBtn">🔔 开启提醒（通知+声音）</button>
+<button class="btn ghost" id="testBtn">▶️ 试听 5 秒后提醒</button>
+<div class="tip">
+  提示：PWA 安装后（添加到主屏幕）锁屏也能弹出提醒，最稳。<br>
+  安卓可在「设置 → 电池 → 浏览器 → 无限制/自启动白名单」提高到达率。
+</div>
+
+<script>
+/* ====== 提醒数据 ====== */
+const SCHEDULE = [
+  {t:"08:50",water:"温水200ml",act:"调座椅：脚平放、膝约90°、腰有支撑、屏幕平视",type:"w"},
+  {t:"09:45",water:"100-150ml",act:"起身接水；提踵20次 + 踝泵20次",type:"wm"},
+  {t:"10:30",water:"100-150ml",act:"站姿髋屈肌拉伸每侧20秒；臀肌夹紧5秒×10次",type:"wm"},
+  {t:"11:15",water:"100-150ml",act:"走廊走动2-3分钟；靠墙天使10次",type:"wm"},
+  {t:"12:00",water:"100ml",act:"午餐；饭后散步10-15分钟，别马上趴睡",type:"w"},
+  {t:"13:00",water:"150ml",act:"午休后补水；站起来伸懒腰",type:"w"},
+  {t:"13:45",water:"100-150ml",act:"靠墙静蹲20-30秒×2组；提踵15次",type:"wm"},
+  {t:"14:30",water:"100-150ml",act:"坐姿腘绳肌拉伸每侧20秒；坐姿转体8次",type:"wm"},
+  {t:"15:15",water:"100-150ml",act:"坐姿抬腿每侧10次；踝泵20次；站姿后踢腿每侧15次",type:"wm"},
+  {t:"16:00",water:"100-150ml",act:"起身接水；爬一层楼或快走2分钟",type:"wm"},
+  {t:"16:45",water:"100-150ml",act:"猫牛式8次；双手交叉上举扩胸；髋屈肌拉伸",type:"wm"},
+  {t:"17:30",water:"100ml",act:"下班前整理；别再连续坐满1小时",type:"w"},
+  {t:"18:00",water:"—",act:"快走15-20分钟；睡前抬腿靠墙10分钟或泡脚",type:"m"},
+];
+const TOTAL_WATER = SCHEDULE.reduce((s,i)=>{const n=parseInt(i.water);return s+(isNaN(n)?0:n);},0);
+const WORK_START=9*60, WORK_END=18*60, IS_WORKDAY = ()=>{const d=new Date().getDay();return d>=1&&d<=5;};
+
+/* ====== 工具 ====== */
+const $=s=>document.querySelector(s);
+const timeToMin=str=>{const[h,m]=str.split(":").map(Number);return h*60+m;};
+const minToTime=min=>String(Math.floor(min/60)).padStart(2,"0")+":"+String(min%60).padStart(2,"0");
+const nowMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes();};
+const loadState=()=>{try{return JSON.parse(localStorage.getItem("remState")||"{}");}catch(e){return{};}};
+let state = loadState(); // {date, done:[], waterDrank:0}
+const todayStr=()=>new Date().toDateString();
+function saveState(){
+  state.date=todayStr();
+  localStorage.setItem("remState",JSON.stringify(state));
+}
+// 跨天自动清空
+if(state.date!==todayStr()){state={done:[],waterDrank:0};saveState();}
+
+/* ====== 音频 ====== */
+let AC=null;
+function beep(times=3){
+  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();}catch(e){return;}
+  const ctx=AC,now=ctx.currentTime;
+  for(let k=0;k<times;k++){
+    const osc=ctx.createOscillator(),gain=ctx.createGain();
+    osc.type="sine";osc.frequency.value=880;
+    gain.gain.setValueAtTime(0.001,now+k*0.5);
+    gain.gain.exponentialRampToValueAtTime(0.4,now+k*0.5+0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001,now+k*0.5+0.35);
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.start(now+k*0.5);osc.stop(now+k*0.5+0.4);
+  }
+ }
+
+/* ====== 通知 ====== */
+const notified=new Set();
+function notify(item,idx){
+  const title="💧 久坐提醒 · "+item.t;
+  const body=(item.water!=="—"?"喝水 "+item.water+" · ":"")+item.act;
+  if("Notification" in window && Notification.permission==="granted"){
+    try{new Notification(title,{body,silent:false,tag:"rem"+idx,icon:"./icon.svg"});}catch(e){}
+  }
+  beep(4);
+  if("vibrate" in navigator) navigator.vibrate([300,150,300,150,400]);
+  notified.add(idx);
+  // 未获得权限也弹页面内弹窗（用户在前台时可见）
+  if(!document.hidden) alert(title+"\n"+body);
+}
+
+/* ====== 渲染 ====== */
+function render(){
+  const now=nowMin();
+  let html="",nextTime=null,nextItem=null,doneCount=0,waterSum=0,leftCount=0;
+
+  SCHEDULE.forEach((item,idx)=>{
+    const tm=timeToMin(item.t);
+    const isDone=state.done.includes(idx);
+    const isNow=!isDone && Math.abs(tm-now)<=1;
+    const within=IS_WORKDAY() && now>=WORK_START && now<=WORK_END;
+    if(isDone)doneCount++;else leftCount++;
+    if(isDone){const w=parseInt(item.water);if(!isNaN(w))waterSum+=w;}
+
+    if(!isDone && nextTime===null){nextTime=tm;nextItem=item;}
+
+    let tags='';
+    if(item.type.includes("w"))tags+='<span class="tag w">💧喝水</span>';
+    if(item.type.includes("m"))tags+='<span class="tag m">🤸起身</span>';
+
+    html+=`<div class="item ${isDone?'done':''} ${isNow?'now':''}" data-idx="${idx}">
+      <div class="time">${item.t}</div>
+      <div class="ico">${isDone?'✅':(isNow?'🔔':'⏰')}</div>
+      <div class="body">
+        <div class="d">${item.act}${tags}</div>
+        ${item.water!=='—'?`<div class="water">🚰 喝水 ${item.water}</div>`:''}
+      </div>
+      <div class="chk">${isDone?'✓':''}</div>
+    </div>`;
+  });
+
+  if(nextItem){
+    $("#nextTime").textContent=nextItem.t;
+    $("#nextDesc").textContent=nextItem.act;
+    const remain=nextTime-now;
+    $("#progress").style.width=Math.max(0,Math.min(100,(remain/45)*100))+"%";
+  }else{
+    $("#nextTime").textContent="今日完成 🎉";
+    $("#nextDesc").textContent="所有提醒已结束，辛苦啦！";
+    $("#progress").style.width="100%";
+  }
+
+  // 喝水进度环
+  const pct=Math.min(100,Math.round((waterSum/TOTAL_WATER)*100));
+  $("#ringFill").style.strokeDashoffset=169.6*(1-pct/100);
+  $("#ringNum").textContent=pct+"%";
+  $("#waterText").textContent=`今日 ${waterSum} / ${TOTAL_WATER} ml`;
+
+  $("#statDone").textContent=doneCount;
+  $("#statWater").textContent=waterSum;
+  $("#statLeft").textContent=leftCount;
+  $("#list").innerHTML=html;
+
+  // 工作日徽标
+  const wk=["日","一","二","三","四","五","六"][new Date().getDay()];
+  $("#dayBadge").innerHTML = IS_WORKDAY()
+    ? `<div class="badge">📅 工作日 · 提醒中（周${wk}）</div>`
+    : `<div class="badge off">🌙 周末 · 今日不提醒（周${wk}）</div>`;
+
+  $("#list").querySelectorAll(".item").forEach(el=>{
+    el.onclick=()=>{
+      const i=Number(el.dataset.idx);
+      if(state.done.includes(i)){state.done=state.done.filter(x=>x!==i);}
+      else {state.done.push(i);}
+      saveState();render();
+    };
+  });
+}
+
+/* ====== 时钟 + 到点检测 ====== */
+function tick(){
+  const d=new Date();
+  const wk="日一二三四五六"[d.getDay()];
+  $("#clock").innerHTML=minToTime(d.getHours()*60+d.getMinutes())+`<small>${d.getMonth()+1}月${d.getDate()}日 周${wk}</small>`;
+  // 仅工作日 9-18 触发通知
+  if(IS_WORKDAY() && nowMin()>=WORK_START && nowMin()<=WORK_END){
+    const cur=nowMin();
+    SCHEDULE.forEach((item,idx)=>{
+      const tm=timeToMin(item.t);
+      if(tm===cur && !notified.has(idx) && !state.done.includes(idx)){
+        notify(item,idx);render();
+      }
+    });
+  }
+}
+
+/* ====== 注册 PWA ====== */
+let deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",(e)=>{
+  e.preventDefault();deferredPrompt=e;
+  $("#installBox").classList.add("show");
+});
+$("#installBox").addEventListener("click",async()=>{
+  if(deferredPrompt){deferredPrompt.prompt();const r=await deferredPrompt.userChoice;deferredPrompt=null;}
+});
+window.addEventListener("appinstalled",()=>{$("#installBox").classList.remove("show");beep(2);});
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("./sw.js").catch(()=>{/* 本地 file:// 会失败，属正常 */});
+  });
+}
+
+/* ====== 按钮 ====== */
+$("#enableBtn").onclick=()=>{
+  if("Notification" in window){
+    Notification.requestPermission().then(p=>{
+      alert(p==="granted"?"✅ 通知已开启，到点会弹窗+响铃":"⚠️ 通知未授权，仍可页面内弹窗+声音提醒");
+    });
+  }
+  beep(1);$("#enableBtn").textContent="✅ 提醒已开启";
+};
+$("#testBtn").onclick=()=>{beep(3);setTimeout(()=>notify({t:"测试",water:"100ml",act:"这是一条测试提醒（声音+振动+通知）"},-1),200);};
+
+setInterval(tick,1000);
+tick();render();
+</script>
+</body>
+</html>
