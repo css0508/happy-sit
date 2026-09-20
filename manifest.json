@@ -1,0 +1,20 @@
+{
+  "name": "久坐提醒 · 喝水+起身",
+  "short_name": "喝水提醒",
+  "description": "上班族久坐提醒：到点喝水、起身运动",
+  "start_url": "./提醒.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1723",
+  "theme_color": "#0f1723",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
